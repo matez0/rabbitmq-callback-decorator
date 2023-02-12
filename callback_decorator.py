@@ -56,14 +56,29 @@ class JsonCallback:
         self.do_callback(body, headers)
 
 
+MESSAGE_TYPE_HEADER = 'message-type'
+
+
 class ModelCallback:
     def __init__(self, *message_types):
         self.message_types = message_types
 
     def __call__(self, do_callback):
         def wrapper(body, headers):
+            if MESSAGE_TYPE_HEADER in headers:
+                try:
+                    message_types = ({
+                        message_type.__name__: message_type for message_type in self.message_types
+                    }[headers[MESSAGE_TYPE_HEADER]],)
+
+                except KeyError as exc:
+                    raise ErrorHandlerCallback.FatalError(exc)
+
+            else:
+                message_types = self.message_types
+
             class Messages(BaseModel):
-                message: Union[self.message_types]
+                message: Union[message_types]
 
             try:
                 body = Messages(message=body).message

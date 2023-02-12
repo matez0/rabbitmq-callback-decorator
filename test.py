@@ -145,3 +145,20 @@ class TestModelCallbackDecorator(TestCallbackDecoratorBase):
         self.callback.acknowledge_message.assert_not_called()
         self.callback.reject_message.assert_called_once_with(*callback_args)
         self.callback.resend_message_later.assert_not_called()
+
+    def test_optional_message_type_can_be_given(self, json_loads):
+        self.headers['message-type'] = self.MyMessage.__name__
+
+        self.test_parsed_message_is_passed_when_message_type_is_given()
+
+    def test_message_shall_be_rejected_when_message_type_does_not_exist(self, json_loads):
+        json_loads.return_value = self.MyMessage.parse_raw(self.message).dict()
+        self.headers['message-type'] = 'Not' + self.MyMessage.__name__
+
+        self.callback(*self.callback_args)
+
+        self.callback_function.assert_not_called()
+
+        self.callback.acknowledge_message.assert_not_called()
+        self.callback.reject_message.assert_called_once_with(*self.callback_args)
+        self.callback.resend_message_later.assert_not_called()
