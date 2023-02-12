@@ -1,6 +1,8 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
+from pydantic import BaseModel, NegativeInt
+
 from callback_decorator import Callback
 
 
@@ -61,3 +63,26 @@ class TestCallbackDecorator(TestCase):
         self.callback.acknowledge_message.assert_not_called()
         self.callback.reject_message.assert_not_called()
         self.callback.resend_message_later.assert_called_once_with(*self.callback_args)
+
+    def test_parsed_message_is_passed_when_message_type_is_given(self):
+        decorator = type(self.callback)
+
+        class MyFirstMessage(BaseModel):
+            myFirstField: bool
+
+        class MyMessage(BaseModel):
+            myField: float
+
+        class MyLastMessage(BaseModel):
+            myLastField: NegativeInt
+
+        @decorator(MyFirstMessage, MyMessage, MyLastMessage)
+        def callback(*args):
+            self.callback_function(*args)
+
+        message = b'{"myField": 3.14}'
+        parsed_message = MyMessage.parse_raw(message)
+
+        callback(*self.callback_args[:3], message)
+
+        self.callback_function.assert_called_once_with(parsed_message, self.headers)
