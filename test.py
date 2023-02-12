@@ -27,7 +27,7 @@ class TestCallbackDecorator(TestCase):
         def callback_function(*args):
             self.callback_function(*args)
 
-        self.callback(*self.callback_args)
+        callback_function(*self.callback_args)
 
         self.callback_function.assert_called_once_with(self.body, self.headers)
 
