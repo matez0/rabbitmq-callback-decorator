@@ -7,10 +7,14 @@ from pydantic import BaseModel, ValidationError
 
 
 class ErrorHandlerCallback(ABC):
+    """Decorates with error handling layer."""
+
     class FatalError(Exception):
+        """Rejects the message because it cannot be processed."""
         pass
 
     class TryAgainError(Exception):
+        """Resends the message later to try to process it again."""
         pass
 
     def __init__(self, do_callback):
@@ -29,14 +33,17 @@ class ErrorHandlerCallback(ABC):
         else:
             self.acknowledge_message(channel, method_frame, header_frame, body)
 
+    @staticmethod
     @abstractmethod
     def reject_message(channel, method_frame, header_frame, body):
         pass
 
+    @staticmethod
     @abstractmethod
     def resend_message_later(channel, method_frame, header_frame, body):
         pass
 
+    @staticmethod
     @abstractmethod
     def acknowledge_message(channel, method_frame, header_frame, body):
         pass
@@ -57,6 +64,8 @@ class JsonCallback:
 
 
 class ModelCallback:
+    """Decorates with message parsing layer."""
+
     def __init__(self, *message_types):
         self.message_types = message_types
 
@@ -77,6 +86,8 @@ class ModelCallback:
 
 
 class CallbackMeta(type(ABC)):
+    """Decorates with message parsing layer, if arguments are given."""
+
     @singledispatchmethod
     def __call__(cls, do_callback: callable):
         return super().__call__(do_callback)
@@ -92,4 +103,44 @@ class CallbackMeta(type(ABC)):
 
 
 class Callback(ErrorHandlerCallback, metaclass=CallbackMeta):
+    """Decorates the callback function with error handling and message parsing layers.
+
+    To create a decorator, derive from the class implementing the abstract methods.
+    Example:
+
+    >>> class MyCallback(Callback):
+    ...     @staticmethod
+    ...     def reject_message(channel, method_frame, header_frame, body):
+    ...         channel.basic_reject(method_frame.delivery_tag)
+    ...     @staticmethod
+    ...     def resend_message_later(channel, method_frame, header_frame, body):
+    ...         pass
+    ...     @staticmethod
+    ...     def acknowledge_message(channel, method_frame, header_frame, body):
+    ...         channel.basic_ack(method_frame.delivery_tag)
+
+    Without decorator parameters, the callback function will get the original message body and the headers.
+    Example:
+
+    >>> @MyCallback
+    ... def do_my_callback(body, headers):
+    ...     ...
+
+    With decorator parameters, the parsed message and the headers are passed.
+    The value of the arguments has to be a type of `BaseModel`.
+    Example:
+
+    >>> from pydantic import BaseModel
+    >>>
+    >>>
+    >>> class MyModel(BaseModel):
+    ...     my_field: int
+    ...
+    >>>
+    >>> @MyCallback(MyModel)
+    ... def do_my_callback(my_object, headers):
+    ...     ...
+
+    On error, raise `Callback.TryAgainError` or `Callback.FatalError` in the callback function.
+    """
     pass
