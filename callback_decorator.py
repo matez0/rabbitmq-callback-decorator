@@ -29,14 +29,17 @@ class ErrorHandlerCallback(ABC):
         else:
             self.acknowledge_message(channel, method_frame, header_frame, body)
 
+    @staticmethod
     @abstractmethod
     def reject_message(channel, method_frame, header_frame, body):
         pass
 
+    @staticmethod
     @abstractmethod
     def resend_message_later(channel, method_frame, header_frame, body):
         pass
 
+    @staticmethod
     @abstractmethod
     def acknowledge_message(channel, method_frame, header_frame, body):
         pass
