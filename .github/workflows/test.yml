@@ -21,6 +21,9 @@ jobs:
       - name: Coding style
         run: |
           pycodestyle . --exclude=.venv --max-line-length=120
+      - name: Doctest
+        run: |
+          python -m doctest -f -v README.md callback_decorator.py
       - name: Unit test
         run: |
           python -m unittest -v
